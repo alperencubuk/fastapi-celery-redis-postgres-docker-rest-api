@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+
+  api:
+    build: ./api
+    ports:
+      - "80:8000"
+    command: uvicorn main:app --host 0.0.0.0 --reload
+    volumes:
+      - ./api:/usr/src/app
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=db+postgresql://user:password@database:5432/alpha
+    depends_on:
+      - redis
+      - database
+
+  worker:
+    build: ./api
+    command: celery -A tasks worker --loglevel=info --logfile=logs/celery.log
+    volumes:
+      - ./api:/usr/src/app
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=db+postgresql://user:password@database:5432/alpha
+    depends_on:
+      - api
+      - redis
+      - database
+
+  redis:
+    image: redis:latest
+
+  database:
+    image: postgres:latest
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=alpha
+    ports:
+      - "5432:5432"
+    user: postgres
+
+volumes:
+  postgres_data:
