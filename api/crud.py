@@ -1,10 +1,10 @@
 from database import db_context
-import models
-import schemas
+from models import User, Weather
+from schemas import UserIn, UserOut, WeatherIn, WeatherOut
 
 
-def crud_add_user(user: schemas.UserIn):
-    db_user = models.User(**user.dict())
+def crud_add_user(user: UserIn):
+    db_user = User(**user.dict())
     with db_context() as db:
         db.add(db_user)
         db.commit()
@@ -14,18 +14,20 @@ def crud_add_user(user: schemas.UserIn):
 
 def crud_get_user(user_id: int):
     with db_context() as db:
-        user = db.query(models.User).filter(models.User.id == user_id).first()
+        user = db.query(User).filter(User.id == user_id).first()
     if user:
-        return schemas.UserOut(**user.__dict__)
+        return UserOut(**user.__dict__)
     return None
 
 
-def crud_add_weather(weather: schemas.WeatherIn):
-    db_weather = models.Weather(**weather.dict())
+def crud_add_weather(weather: WeatherIn):
+    db_weather = Weather(**weather.dict())
     with db_context() as db:
-        exist = db.query(models.Weather).filter(
-            models.Weather.city == weather.city,
-            models.Weather.date == weather.date).first()
+        exist = (
+            db.query(Weather)
+            .filter(Weather.city == weather.city, Weather.date == weather.date)
+            .first()
+        )
         if exist:
             return None
         db.add(db_weather)
@@ -36,16 +38,20 @@ def crud_add_weather(weather: schemas.WeatherIn):
 
 def crud_get_weather(city: str):
     with db_context() as db:
-        weather = db.query(models.Weather).filter(
-            models.Weather.city == city).order_by(
-            models.Weather.date.desc()).limit(7).all()
+        weather = (
+            db.query(Weather)
+            .filter(Weather.city == city)
+            .order_by(Weather.date.desc())
+            .limit(7)
+            .all()
+        )
     if weather:
         result = []
         for item in weather:
-            result.append(schemas.WeatherOut(**item.__dict__))
+            result.append(WeatherOut(**item.__dict__))
         return {city: result[::-1]}
     return None
 
 
 def crud_error_message(message):
-    return {'error': message}
+    return {"error": message}
